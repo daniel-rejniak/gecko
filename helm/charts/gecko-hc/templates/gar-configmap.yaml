@@ -1,0 +1,11 @@
+{{- if .Values.garPullSecret.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "gecko-hc.fullname" . }}-gar-config
+  labels:
+    {{- include "gecko-hc.labels" . | nindent 4 }}
+data:
+  gar.json: |
+    {{- omit .Values.garPullSecret "enabled" | toPrettyJson | nindent 4 }}
+{{- end }}

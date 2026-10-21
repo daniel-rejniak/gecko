@@ -14,11 +14,14 @@ spec:
       {{- include "gecko-hc.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- $hasAnnotations := or .Values.podAnnotations (and .Values.customerLabels (ne .Values.customerLabels "{}")) }}
+      {{- $hasAnnotations := or .Values.podAnnotations (and .Values.customerLabels (ne .Values.customerLabels "{}")) .Values.garPullSecret.enabled }}
       {{- if $hasAnnotations }}
       annotations:
         {{- if and .Values.customerLabels (ne .Values.customerLabels "{}") }}
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.garPullSecret.enabled }}
+        checksum/gar-config: {{ include (print $.Template.BasePath "/gar-configmap.yaml") . | sha256sum }}
         {{- end }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
@@ -37,11 +40,18 @@ spec:
       serviceAccountName: {{ include "gecko-hc.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      {{- if and .Values.customerLabels (ne .Values.customerLabels "{}") }}
+      {{- if or (and .Values.customerLabels (ne .Values.customerLabels "{}")) .Values.garPullSecret.enabled }}
       volumes:
+        {{- if and .Values.customerLabels (ne .Values.customerLabels "{}") }}
         - name: customer-labels
           configMap:
             name: {{ include "gecko-hc.fullname" . }}-customer-labels
+        {{- end }}
+        {{- if .Values.garPullSecret.enabled }}
+        - name: gar-config
+          configMap:
+            name: {{ include "gecko-hc.fullname" . }}-gar-config
+        {{- end }}
       {{- end }}
       containers:
         - name: hc
@@ -59,12 +69,24 @@ spec:
             - --workers={{ .Values.workers }}
             - --pull-secret-store-name={{ .Values.pullSecret.storeName }}
             - --pull-secret-gcp-key={{ .Values.pullSecret.gcpKey }}
+            {{- if .Values.garPullSecret.enabled }}
+            - --gar-config-file=/etc/config/gar/gar.json
+            {{- end }}
           {{- if and .Values.customerLabels (ne .Values.customerLabels "{}") }}
             - --customer-labels-file=/etc/config/customer-labels/customer-labels.json
+          {{- end }}
+          {{- if or (and .Values.customerLabels (ne .Values.customerLabels "{}")) .Values.garPullSecret.enabled }}
           volumeMounts:
+            {{- if and .Values.customerLabels (ne .Values.customerLabels "{}") }}
             - name: customer-labels
               mountPath: /etc/config/customer-labels
               readOnly: true
+            {{- end }}
+            {{- if .Values.garPullSecret.enabled }}
+            - name: gar-config
+              mountPath: /etc/config/gar
+              readOnly: true
+            {{- end }}
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

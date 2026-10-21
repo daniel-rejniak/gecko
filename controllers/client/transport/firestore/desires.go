@@ -12,14 +12,17 @@ import (
 
 // kindToResource maps well-known Kind strings to their plural Kubernetes resource names.
 var kindToResource = map[string]string{
-	"Namespace":      "namespaces",
-	"ExternalSecret": "externalsecrets",
-	"Certificate":    "certificates",
-	"HostedCluster":  "hostedclusters",
-	"NodePool":       "nodepools",
-	"Job":            "jobs",
-	"ConfigMap":      "configmaps",
-	"Secret":         "secrets",
+	"Namespace":       "namespaces",
+	"ExternalSecret":  "externalsecrets",
+	"Certificate":     "certificates",
+	"HostedCluster":   "hostedclusters",
+	"NodePool":        "nodepools",
+	"Job":             "jobs",
+	"ConfigMap":       "configmaps",
+	"Secret":          "secrets",
+	"ServiceAccount":  "serviceaccounts",
+	"IAMPolicyMember": "iampolicymembers",
+	"GCRAccessToken":  "gcraccesstokens",
 }
 
 type parsedManifest struct {

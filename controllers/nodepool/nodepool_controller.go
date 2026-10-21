@@ -9,6 +9,7 @@ import (
 	"github.com/openshift-online/gecko/controllers/client/transport"
 	"github.com/openshift-online/gecko/controllers/nodepool/manifest"
 	"github.com/openshift-online/gecko/controllers/util/constants"
+	"github.com/openshift-online/gecko/controllers/util/gar"
 	"github.com/openshift-online/gecko/controllers/util/logger"
 	privatev1 "github.com/openshift-online/gecko/platform-api/api/private/v1"
 
@@ -33,14 +34,16 @@ type Reconciler struct {
 	transport transport.Client
 	log       logger.Logger
 	client    client.Client
+	garConfig *gar.Config
 }
 
 // New creates a new nodepool Reconciler.
-func New(transport transport.Client, log logger.Logger, c client.Client) *Reconciler {
+func New(transport transport.Client, log logger.Logger, c client.Client, garConfig *gar.Config) *Reconciler {
 	return &Reconciler{
 		transport: transport,
 		log:       log,
 		client:    c,
+		garConfig: garConfig,
 	}
 }
 
@@ -169,19 +172,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	manifests, err := manifest.Build(manifest.Input{
-		NodePoolID:         nodepoolID,
-		NodePoolName:       np.Name,
-		NodePoolGeneration: np.Generation,
-		ClusterID:          string(cluster.UID),
-		ClusterName:        safeName,
-		Replicas:           replicas,
-		MachineType:        machineType,
-		GCPRegion:          gcpRegion,
-		Zone:               zone,
-		GCPSubnet:          gcpSubnet,
-		DiskSizeGB:         diskSizeGB,
-		DiskType:           diskType,
-		ReleaseImage:       np.Status.VersionResolution.ReleaseImage,
+		NodePoolID:                 nodepoolID,
+		NodePoolName:               np.Name,
+		NodePoolGeneration:         np.Generation,
+		ClusterID:                  string(cluster.UID),
+		ClusterName:                safeName,
+		Replicas:                   replicas,
+		MachineType:                machineType,
+		GCPRegion:                  gcpRegion,
+		Zone:                       zone,
+		GCPSubnet:                  gcpSubnet,
+		DiskSizeGB:                 diskSizeGB,
+		DiskType:                   diskType,
+		ReleaseImage:               np.Status.VersionResolution.ReleaseImage,
+		EnableGARPullSecretRefresh: r.garConfig.Selected(cluster.Status.PlacementResult.ManagementClusterName),
 	})
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("nodepool reconciler: build manifests: %w", err)

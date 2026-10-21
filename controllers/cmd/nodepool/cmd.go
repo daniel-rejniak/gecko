@@ -7,6 +7,7 @@ import (
 
 	fstransport "github.com/openshift-online/gecko/controllers/client/transport/firestore"
 	nodepool "github.com/openshift-online/gecko/controllers/nodepool"
+	"github.com/openshift-online/gecko/controllers/util/gar"
 	"github.com/openshift-online/gecko/controllers/util/setup"
 	privatev1 "github.com/openshift-online/gecko/platform-api/api/private/v1"
 
@@ -15,11 +16,16 @@ import (
 
 // NewCommand returns the nodepool subcommand.
 func NewCommand(rf *setup.RootFlags) *cobra.Command {
+	var garConfigFile string
 	cmd := &cobra.Command{
 		Use:   "nodepool",
 		Short: "Run the nodepool controller",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+			garConfig, err := gar.Load(garConfigFile)
+			if err != nil {
+				return err
+			}
 
 			log, err := rf.NewLogger("nodepool-controller")
 			if err != nil {
@@ -35,7 +41,7 @@ func NewCommand(rf *setup.RootFlags) *cobra.Command {
 				return fmt.Errorf("create manager: %w", err)
 			}
 
-			rec := nodepool.New(t, log, mgr.GetClient())
+			rec := nodepool.New(t, log, mgr.GetClient(), garConfig)
 
 			if err := ctrl.NewControllerManagedBy(mgr).
 				For(&privatev1.NodePool{}).
@@ -48,5 +54,6 @@ func NewCommand(rf *setup.RootFlags) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&garConfigFile, "gar-config-file", "", "Path to optional management-cluster GAR credential configuration")
 	return cmd
 }

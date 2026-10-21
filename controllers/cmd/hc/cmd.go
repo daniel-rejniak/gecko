@@ -8,6 +8,7 @@ import (
 
 	fstransport "github.com/openshift-online/gecko/controllers/client/transport/firestore"
 	hc "github.com/openshift-online/gecko/controllers/hc"
+	"github.com/openshift-online/gecko/controllers/util/gar"
 	"github.com/openshift-online/gecko/controllers/util/setup"
 	privatev1 "github.com/openshift-online/gecko/platform-api/api/private/v1"
 
@@ -26,6 +27,7 @@ func NewCommand(rf *setup.RootFlags) *cobra.Command {
 		customerLabelsFile  string
 		pullSecretStoreName string
 		pullSecretGCPKey    string
+		garConfigFile       string
 	)
 
 	cmd := &cobra.Command{
@@ -33,6 +35,10 @@ func NewCommand(rf *setup.RootFlags) *cobra.Command {
 		Short: "Run the hosted-cluster (hc) controller",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+			garConfig, err := gar.Load(garConfigFile)
+			if err != nil {
+				return err
+			}
 
 			log, err := rf.NewLogger("hc-controller")
 			if err != nil {
@@ -59,7 +65,7 @@ func NewCommand(rf *setup.RootFlags) *cobra.Command {
 				return fmt.Errorf("index nodepools by cluster ID: %w", err)
 			}
 
-			rec := hc.New(t, log, mgr.GetClient(), customerLabels, pullSecretStoreName, pullSecretGCPKey)
+			rec := hc.New(t, log, mgr.GetClient(), customerLabels, pullSecretStoreName, pullSecretGCPKey, garConfig)
 
 			if err := ctrl.NewControllerManagedBy(mgr).
 				For(&privatev1.Cluster{}).
@@ -77,6 +83,7 @@ func NewCommand(rf *setup.RootFlags) *cobra.Command {
 	cmd.Flags().StringVar(&customerLabelsFile, "customer-labels-file", "", "Path to JSON file containing customer-facing GCP resource labels (omit to disable)")
 	cmd.Flags().StringVar(&pullSecretStoreName, "pull-secret-store-name", "gcp-secret-manager", "External Secrets ClusterSecretStore name for HostedCluster pull secret")
 	cmd.Flags().StringVar(&pullSecretGCPKey, "pull-secret-gcp-key", "default-openshift-pull-secret", "GCP Secret Manager key used for HostedCluster pull secret")
+	cmd.Flags().StringVar(&garConfigFile, "gar-config-file", "", "Path to optional management-cluster GAR credential configuration")
 
 	return cmd
 }

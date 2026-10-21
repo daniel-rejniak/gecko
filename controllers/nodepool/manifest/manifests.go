@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/openshift-online/gecko/controllers/util/gar"
 )
 
 const (
@@ -20,19 +22,20 @@ const (
 
 // Input holds all parameters for building the NodePool manifests.
 type Input struct {
-	NodePoolID         string
-	NodePoolName       string
-	NodePoolGeneration int64
-	ClusterID          string
-	ClusterName        string
-	Replicas           int32
-	MachineType        string // e.g. "n2-standard-4"
-	GCPRegion          string
-	Zone               string // optional; falls back to GCPRegion+"-a"
-	GCPSubnet          string
-	DiskSizeGB         int64  // default: 100
-	DiskType           string // default: "pd-ssd"
-	ReleaseImage       string
+	NodePoolID                 string
+	NodePoolName               string
+	NodePoolGeneration         int64
+	ClusterID                  string
+	ClusterName                string
+	Replicas                   int32
+	MachineType                string // e.g. "n2-standard-4"
+	GCPRegion                  string
+	Zone                       string // optional; falls back to GCPRegion+"-a"
+	GCPSubnet                  string
+	DiskSizeGB                 int64  // default: 100
+	DiskType                   string // default: "pd-ssd"
+	ReleaseImage               string
+	EnableGARPullSecretRefresh bool
 }
 
 // Build constructs raw JSON bytes for the NodePool manifest.
@@ -115,6 +118,9 @@ func Build(input Input) ([][]byte, error) {
 		},
 	}
 
+	if input.EnableGARPullSecretRefresh {
+		nodePoolManifest["spec"].(map[string]any)["nodeLabels"] = map[string]any{gar.NodeLabel: "true"}
+	}
 	rawBytes, err := json.Marshal(nodePoolManifest)
 	if err != nil {
 		return nil, fmt.Errorf("nodepool manifest: marshal NodePool: %w", err)

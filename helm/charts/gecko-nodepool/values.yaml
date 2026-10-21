@@ -1,5 +1,15 @@
 replicaCount: 1
 
+garPullSecret:
+  enabled: false
+  selectForHostedClusters: false
+  registryHost: ""
+  repositoryPrefix: ""
+  refreshInterval: 20m
+  redhatSecretGCPKey: ""
+  controlPlaneOperatorImage: ""
+  managementClusters: {}
+
 image:
   registry: us-docker.pkg.dev
   repository: gcp-hcp-commons/gcp-hcp-images/gecko-controllers

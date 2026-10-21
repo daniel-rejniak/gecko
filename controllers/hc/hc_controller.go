@@ -10,6 +10,7 @@ import (
 	"github.com/openshift-online/gecko/controllers/client/transport"
 	"github.com/openshift-online/gecko/controllers/hc/manifest"
 	"github.com/openshift-online/gecko/controllers/util/constants"
+	"github.com/openshift-online/gecko/controllers/util/gar"
 	"github.com/openshift-online/gecko/controllers/util/logger"
 	privatev1 "github.com/openshift-online/gecko/platform-api/api/private/v1"
 
@@ -38,10 +39,11 @@ type Reconciler struct {
 	customerLabels      map[string]string
 	pullSecretStoreName string
 	pullSecretGCPKey    string
+	garConfig           *gar.Config
 }
 
 // New creates a new Reconciler.
-func New(transport transport.Client, log logger.Logger, c client.Client, customerLabels map[string]string, pullSecretStoreName, pullSecretGCPKey string) *Reconciler {
+func New(transport transport.Client, log logger.Logger, c client.Client, customerLabels map[string]string, pullSecretStoreName, pullSecretGCPKey string, garConfig *gar.Config) *Reconciler {
 	return &Reconciler{
 		transport:           transport,
 		log:                 log,
@@ -49,6 +51,7 @@ func New(transport transport.Client, log logger.Logger, c client.Client, custome
 		customerLabels:      customerLabels,
 		pullSecretStoreName: pullSecretStoreName,
 		pullSecretGCPKey:    pullSecretGCPKey,
+		garConfig:           garConfig,
 	}
 }
 
@@ -154,32 +157,34 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// Build manifests.
 	// TODO: CreatedBy is not yet in the orlop ClusterSpec.
 	mwInput := manifest.Input{
-		ClusterID:            string(cluster.UID),
-		ClusterName:          safeName,
-		Generation:           cluster.Generation,
-		CreatedBy:            cluster.Annotations[constants.AnnotationCreatedBy],
-		InfraID:              cluster.Spec.InfraID,
-		IssuerURL:            cluster.Spec.IssuerURL,
-		GCPProjectID:         gcpProjectID,
-		GCPRegion:            gcpRegion,
-		GCPNetwork:           gcpNetwork,
-		GCPSubnet:            gcpSubnet,
-		GCPEndpointAccess:    gcpEndpointAccess,
-		WIFProjectNumber:     wifProjectNumber,
-		WIFPoolID:            wifPoolID,
-		WIFProviderID:        wifProviderID,
-		NodePoolEmail:        nodePoolEmail,
-		ControlPlaneEmail:    controlPlaneEmail,
-		CloudControllerEmail: cloudControllerEmail,
-		StorageEmail:         storageEmail,
-		ImageRegistryEmail:   imageRegistryEmail,
-		NetworkEmail:         networkEmail,
-		ReleaseImage:         vr.ReleaseImage,
-		ReleaseChannel:       vr.CincinnatiChannel,
-		BaseDomain:           placement.BaseDomain,
-		PullSecretStoreName:  r.pullSecretStoreName,
-		PullSecretGCPKey:     r.pullSecretGCPKey,
-		ResourceLabels:       r.customerLabels,
+		ClusterID:                  string(cluster.UID),
+		ClusterName:                safeName,
+		Generation:                 cluster.Generation,
+		CreatedBy:                  cluster.Annotations[constants.AnnotationCreatedBy],
+		InfraID:                    cluster.Spec.InfraID,
+		IssuerURL:                  cluster.Spec.IssuerURL,
+		GCPProjectID:               gcpProjectID,
+		GCPRegion:                  gcpRegion,
+		GCPNetwork:                 gcpNetwork,
+		GCPSubnet:                  gcpSubnet,
+		GCPEndpointAccess:          gcpEndpointAccess,
+		WIFProjectNumber:           wifProjectNumber,
+		WIFPoolID:                  wifPoolID,
+		WIFProviderID:              wifProviderID,
+		NodePoolEmail:              nodePoolEmail,
+		ControlPlaneEmail:          controlPlaneEmail,
+		CloudControllerEmail:       cloudControllerEmail,
+		StorageEmail:               storageEmail,
+		ImageRegistryEmail:         imageRegistryEmail,
+		NetworkEmail:               networkEmail,
+		ReleaseImage:               vr.ReleaseImage,
+		ReleaseChannel:             vr.CincinnatiChannel,
+		BaseDomain:                 placement.BaseDomain,
+		PullSecretStoreName:        r.pullSecretStoreName,
+		PullSecretGCPKey:           r.pullSecretGCPKey,
+		ResourceLabels:             r.customerLabels,
+		ManagementClusterProjectID: placement.ManagementClusterName,
+		GAR:                        r.garConfig,
 	}
 
 	manifests, err := manifest.Build(mwInput)

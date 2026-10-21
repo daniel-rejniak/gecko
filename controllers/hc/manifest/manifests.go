@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+
+	"github.com/openshift-online/gecko/controllers/util/gar"
 )
 
 // Input holds all parameters needed to build the HC manifests.
@@ -40,6 +42,8 @@ type Input struct {
 	CAPGImage                    string            // optional — set CAPG annotation if non-empty
 	Slug                         string            // default: "user" (username slug for DNS names)
 	ResourceLabels               map[string]string // optional — sets spec.platform.gcp.resourceLabels on the HostedCluster CR
+	ManagementClusterProjectID   string
+	GAR                          *gar.Config
 }
 
 // Build constructs raw JSON bytes for each manifest resource from the given input.
@@ -94,6 +98,9 @@ func validate(input Input) error {
 	if input.Generation <= 0 {
 		return fmt.Errorf("hc manifest: Generation must be > 0")
 	}
+	if err := input.GAR.Validate(); err != nil {
+		return fmt.Errorf("hc manifest: %w", err)
+	}
 	return nil
 }
 
@@ -119,7 +126,12 @@ func buildManifests(input Input, clusterNS, hcNS string) ([][]byte, error) {
 		return nil, err
 	}
 
-	return [][]byte{ns, es, cert, hc, job}, nil
+	manifests := [][]byte{ns, es, cert, hc, job}
+	garResources, err := buildGARResources(input, clusterNS)
+	if err != nil {
+		return nil, err
+	}
+	return append(manifests, garResources...), nil
 }
 
 func buildNamespace(input Input, clusterNS string) ([]byte, error) {
@@ -252,6 +264,13 @@ func buildHostedCluster(input Input, clusterNS string) ([]byte, error) {
 	if input.CAPGImage != "" {
 		annotations["hypershift.openshift.io/capi-provider-gcp-image"] = input.CAPGImage
 	}
+	if input.GAR.Selected(input.ManagementClusterProjectID) {
+		annotations[gar.RefreshAnnotation] = "true"
+		annotations["hypershift.openshift.io/olm-catalogs-is-registry-overrides"] = "registry.redhat.io/redhat=" + input.GAR.RepositoryPrefix + "/redhat"
+		if input.CPOImage == "" && input.GAR.ControlPlaneOperatorImage != "" {
+			annotations["hypershift.openshift.io/control-plane-operator-image"] = input.GAR.ControlPlaneOperatorImage
+		}
+	}
 
 	obj := map[string]any{
 		"apiVersion": "hypershift.openshift.io/v1beta1",
@@ -372,6 +391,14 @@ func buildHostedCluster(input Input, clusterNS string) ([]byte, error) {
 				},
 			},
 		},
+	}
+	if input.GAR.Selected(input.ManagementClusterProjectID) {
+		spec := obj["spec"].(map[string]any)
+		spec["pullSecret"] = map[string]any{"name": gar.PullSecretName}
+		spec["imageContentSources"] = []any{
+			map[string]any{"source": "quay.io", "mirrors": []string{input.GAR.RepositoryPrefix}},
+			map[string]any{"source": "registry.redhat.io", "mirrors": []string{input.GAR.RepositoryPrefix}},
+		}
 	}
 	raw, err := json.Marshal(obj)
 	if err != nil {

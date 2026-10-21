@@ -16,6 +16,16 @@ pullSecret:
   storeName: gcp-secret-manager
   gcpKey: default-openshift-pull-secret
 
+garPullSecret:
+  enabled: false
+  selectForHostedClusters: false
+  registryHost: ""
+  repositoryPrefix: ""
+  refreshInterval: 20m
+  redhatSecretGCPKey: ""
+  controlPlaneOperatorImage: ""
+  managementClusters: {}
+
 # JSON-encoded customer-facing GCP resource labels (e.g., goog-partner-solution).
 # Injected by ArgoCD from the cluster secret meta_customer_labels.
 # Default to empty object if not provided.

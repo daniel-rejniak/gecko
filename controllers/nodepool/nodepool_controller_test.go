@@ -265,7 +265,7 @@ func buildReconciler(
 		clsGetErr:    clsGetErr,
 		statusWriter: &mockStatusWriter{updateErr: statusErr},
 	}
-	return New(tr, newTestLogger(t), storeClient), storeClient
+	return New(tr, newTestLogger(t), storeClient, nil), storeClient
 }
 
 // ---------------------------------------------------------------------------
@@ -925,7 +925,7 @@ func TestReconcile_AddFinalizer_UpdateError(t *testing.T) {
 		statusWriter: &mockStatusWriter{},
 		updateErr:    fmt.Errorf("etcd write error"),
 	}
-	r := New(tr, newTestLogger(t), storeClient)
+	r := New(tr, newTestLogger(t), storeClient, nil)
 
 	_, err := r.Reconcile(context.Background(), npReq("cluster-test", "np-test"))
 	require.Error(t, err)
@@ -1148,7 +1148,7 @@ func TestReconcile_Deletion_RemoveFinalizerError(t *testing.T) {
 		statusWriter: &mockStatusWriter{},
 		updateErr:    fmt.Errorf("etcd write error"),
 	}
-	r := New(tr, newTestLogger(t), storeClient)
+	r := New(tr, newTestLogger(t), storeClient, nil)
 
 	// Simulate ApplyDesires exist (deletion not started).
 	npGroupKey := mustNodePoolGroupKey("cluster-test", "cluster-test", "np-test")
