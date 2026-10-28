@@ -4,6 +4,7 @@ package nodepool
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/openshift-online/gecko/controllers/client/transport"
@@ -30,18 +31,35 @@ const (
 
 // Reconciler implements the nodepool controller reconciliation loop.
 type Reconciler struct {
-	transport transport.Client
-	log       logger.Logger
-	client    client.Client
+	transport             transport.Client
+	log                   logger.Logger
+	client                client.Client
+	workerRegistryMirrors map[string]string
+}
+
+// Option configures optional nodepool reconciler behavior.
+type Option func(*Reconciler)
+
+// WithWorkerRegistryMirrors configures worker-only registry authentication.
+// The copy prevents caller mutation from changing already configured reconcilers.
+func WithWorkerRegistryMirrors(mirrors map[string]string) Option {
+	configured := maps.Clone(mirrors)
+	return func(r *Reconciler) {
+		r.workerRegistryMirrors = maps.Clone(configured)
+	}
 }
 
 // New creates a new nodepool Reconciler.
-func New(transport transport.Client, log logger.Logger, c client.Client) *Reconciler {
-	return &Reconciler{
+func New(transport transport.Client, log logger.Logger, c client.Client, options ...Option) *Reconciler {
+	r := &Reconciler{
 		transport: transport,
 		log:       log,
 		client:    c,
 	}
+	for _, option := range options {
+		option(r)
+	}
+	return r
 }
 
 // Reconcile runs the nodepool controller loop for one nodepool event.
@@ -169,19 +187,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	manifests, err := manifest.Build(manifest.Input{
-		NodePoolID:         nodepoolID,
-		NodePoolName:       np.Name,
-		NodePoolGeneration: np.Generation,
-		ClusterID:          string(cluster.UID),
-		ClusterName:        safeName,
-		Replicas:           replicas,
-		MachineType:        machineType,
-		GCPRegion:          gcpRegion,
-		Zone:               zone,
-		GCPSubnet:          gcpSubnet,
-		DiskSizeGB:         diskSizeGB,
-		DiskType:           diskType,
-		ReleaseImage:       np.Status.VersionResolution.ReleaseImage,
+		NodePoolID:            nodepoolID,
+		NodePoolName:          np.Name,
+		NodePoolGeneration:    np.Generation,
+		ClusterID:             string(cluster.UID),
+		ClusterName:           safeName,
+		Replicas:              replicas,
+		MachineType:           machineType,
+		GCPRegion:             gcpRegion,
+		Zone:                  zone,
+		GCPSubnet:             gcpSubnet,
+		DiskSizeGB:            diskSizeGB,
+		DiskType:              diskType,
+		ReleaseImage:          np.Status.VersionResolution.ReleaseImage,
+		NodeLabels:            np.Spec.NodeLabels,
+		Taints:                np.Spec.Taints,
+		WorkerRegistryMirrors: r.workerRegistryMirrors,
 	})
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("nodepool reconciler: build manifests: %w", err)

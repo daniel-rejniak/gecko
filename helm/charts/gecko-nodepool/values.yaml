@@ -14,6 +14,10 @@ logLevel: info
 logFormat: json
 workers: 10
 
+# Worker-only source registry to GAR repository prefix mappings.
+# Empty preserves the existing worker authentication path.
+workerRegistryMirrors: {}
+
 serviceAccount:
   create: true
   annotations: {}

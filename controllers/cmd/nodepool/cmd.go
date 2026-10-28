@@ -7,6 +7,7 @@ import (
 
 	fstransport "github.com/openshift-online/gecko/controllers/client/transport/firestore"
 	nodepool "github.com/openshift-online/gecko/controllers/nodepool"
+	"github.com/openshift-online/gecko/controllers/nodepool/workerauth"
 	"github.com/openshift-online/gecko/controllers/util/setup"
 	privatev1 "github.com/openshift-online/gecko/platform-api/api/private/v1"
 
@@ -15,10 +16,15 @@ import (
 
 // NewCommand returns the nodepool subcommand.
 func NewCommand(rf *setup.RootFlags) *cobra.Command {
+	var workerRegistryMirrors []string
 	cmd := &cobra.Command{
 		Use:   "nodepool",
 		Short: "Run the nodepool controller",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			mirrors, err := workerauth.ParseMirrors(workerRegistryMirrors)
+			if err != nil {
+				return fmt.Errorf("configure worker registry mirrors: %w", err)
+			}
 			ctx := cmd.Context()
 
 			log, err := rf.NewLogger("nodepool-controller")
@@ -35,7 +41,7 @@ func NewCommand(rf *setup.RootFlags) *cobra.Command {
 				return fmt.Errorf("create manager: %w", err)
 			}
 
-			rec := nodepool.New(t, log, mgr.GetClient())
+			rec := nodepool.New(t, log, mgr.GetClient(), nodepool.WithWorkerRegistryMirrors(mirrors))
 
 			if err := ctrl.NewControllerManagedBy(mgr).
 				For(&privatev1.NodePool{}).
@@ -48,5 +54,7 @@ func NewCommand(rf *setup.RootFlags) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringArrayVar(&workerRegistryMirrors, "worker-registry-mirror", nil,
+		"Worker-only registry mirror SOURCE=GAR_REPOSITORY_PREFIX (repeat for each source; empty disables worker identity authentication)")
 	return cmd
 }

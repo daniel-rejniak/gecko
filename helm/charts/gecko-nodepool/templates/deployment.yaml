@@ -45,6 +45,9 @@ spec:
             - --log-level={{ .Values.logLevel }}
             - --log-format={{ .Values.logFormat }}
             - --workers={{ .Values.workers }}
+            {{- range $source, $destination := .Values.workerRegistryMirrors }}
+            - {{ printf "--worker-registry-mirror=%s=%s" $source $destination | quote }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
