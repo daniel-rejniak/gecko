@@ -72,4 +72,9 @@ Validate required values.
 {{- if not (trim (toString .Values.image.tag)) -}}
 {{- fail "image.tag must be set (e.g. --set image.tag=abc1234)" -}}
 {{- end -}}
+{{- if .Values.garAccess.enabled -}}
+{{- if not (regexMatch "^projects/[^/]+/locations/[^/]+/repositories/[^/]+$" .Values.garAccess.repository) -}}
+{{- fail "garAccess.repository must be projects/PROJECT/locations/LOCATION/repositories/REPOSITORY when GAR access is enabled" -}}
+{{- end -}}
+{{- end -}}
 {{- end }}

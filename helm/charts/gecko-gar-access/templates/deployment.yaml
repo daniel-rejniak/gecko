@@ -1,0 +1,54 @@
+{{- if not (regexMatch "^projects/[^/]+/locations/[^/]+/repositories/[^/]+$" .Values.garAccess.repository) -}}
+{{- fail "garAccess.repository must be projects/PROJECT/locations/LOCATION/repositories/REPOSITORY" -}}
+{{- end -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+spec:
+  # The POC uses one lifecycle controller, including during upgrades.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gecko-gar-access
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gecko-gar-access
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ .Release.Name }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        fsGroup: 65532
+      containers:
+        - name: gar-access
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ required "image.tag must be set" .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - gar-access
+            - {{ printf "--gar-repository=%s" (required "garAccess.repository must be set" .Values.garAccess.repository) | quote }}
+            - {{ printf "--iam-namespace=%s" (default .Release.Namespace .Values.garAccess.iamNamespace) | quote }}
+            {{- if .Values.orlopURL }}
+            - {{ printf "--orlop-url=%s" .Values.orlopURL | quote }}
+            {{- end }}
+            - --log-level={{ .Values.logLevel }}
+            - --log-format={{ .Values.logFormat }}
+            - --workers={{ .Values.workers }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

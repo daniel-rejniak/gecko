@@ -1,0 +1,28 @@
+image:
+  registry: us-docker.pkg.dev
+  repository: gcp-hcp-commons/gcp-hcp-images/gecko-controllers
+  tag: ""
+  pullPolicy: Always
+
+garAccess:
+  # Temporary dev POC settings; replace with infra-provided configuration later.
+  repository: projects/gcp-hcp-commons-dev/locations/northamerica-northeast2/repositories/gcp-hcp-quay
+  iamNamespace: gecko-system
+
+orlopURL: ""
+logLevel: info
+logFormat: json
+workers: 10
+
+serviceAccount:
+  annotations: {}
+
+imagePullSecrets: []
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: gecko-gar-access
+description: Gecko shared customer GAR Reader grant controller
+type: application
+version: 0.1.0

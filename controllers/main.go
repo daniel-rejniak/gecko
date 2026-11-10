@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	cmdcontrolplaneupgrade "github.com/openshift-online/gecko/controllers/cmd/controlplaneupgrade"
+	cmdgaraccess "github.com/openshift-online/gecko/controllers/cmd/garaccess"
 	cmdhc "github.com/openshift-online/gecko/controllers/cmd/hc"
 	cmdnodepool "github.com/openshift-online/gecko/controllers/cmd/nodepool"
 	cmdnodepoolvrresolution "github.com/openshift-online/gecko/controllers/cmd/nodepoolvrresolution"
@@ -57,6 +58,7 @@ func main() {
 		cmdplacement.NewCommand(rf),
 		cmdhc.NewCommand(rf),
 		cmdnodepool.NewCommand(rf),
+		cmdgaraccess.NewCommand(rf),
 		cmdcontrolplaneupgrade.NewCommand(rf),
 	)
 

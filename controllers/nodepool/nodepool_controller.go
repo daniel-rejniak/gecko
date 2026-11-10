@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/openshift-online/gecko/controllers/client/transport"
+	"github.com/openshift-online/gecko/controllers/garaccess"
 	"github.com/openshift-online/gecko/controllers/nodepool/manifest"
 	"github.com/openshift-online/gecko/controllers/util/constants"
 	"github.com/openshift-online/gecko/controllers/util/logger"
@@ -30,6 +31,9 @@ const (
 
 // Reconciler implements the nodepool controller reconciliation loop.
 type Reconciler struct {
+	// GARAccess enables the optional GAR provisioning gate for this POC.
+	GARAccess *garaccess.Gate
+
 	transport transport.Client
 	log       logger.Logger
 	client    client.Client
@@ -127,6 +131,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		log.Infof(ctx, "nodepool VR version %q does not match spec version %q, requeueing after %s",
 			np.Status.VersionResolution.ReleaseVersion, np.Spec.Release.Version, requeuePending)
 		return reconcile.Result{RequeueAfter: requeuePending}, nil
+	}
+
+	if ready, err := r.garAccessReady(ctx, &np, &cluster); !ready {
+		return reconcile.Result{RequeueAfter: requeuePending}, err
 	}
 
 	// Extract nodepool GCP platform fields.

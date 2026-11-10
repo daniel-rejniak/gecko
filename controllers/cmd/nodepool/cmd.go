@@ -6,20 +6,29 @@ import (
 	"github.com/spf13/cobra"
 
 	fstransport "github.com/openshift-online/gecko/controllers/client/transport/firestore"
+	"github.com/openshift-online/gecko/controllers/garaccess"
 	nodepool "github.com/openshift-online/gecko/controllers/nodepool"
 	"github.com/openshift-online/gecko/controllers/util/setup"
 	privatev1 "github.com/openshift-online/gecko/platform-api/api/private/v1"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NewCommand returns the nodepool subcommand.
 func NewCommand(rf *setup.RootFlags) *cobra.Command {
+	var garConfig garaccess.Config
 	cmd := &cobra.Command{
 		Use:   "nodepool",
 		Short: "Run the nodepool controller",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+			garEnabled := garConfig.Repository != "" || garConfig.IAMNamespace != ""
+			if garEnabled {
+				if err := garConfig.Validate(); err != nil {
+					return err
+				}
+			}
 
 			log, err := rf.NewLogger("nodepool-controller")
 			if err != nil {
@@ -36,6 +45,20 @@ func NewCommand(rf *setup.RootFlags) *cobra.Command {
 			}
 
 			rec := nodepool.New(t, log, mgr.GetClient())
+			if garEnabled {
+				kccConfig, err := ctrl.GetConfig()
+				if err != nil {
+					return fmt.Errorf("get regional Kubernetes config: %w", err)
+				}
+				kcc, err := client.New(kccConfig, client.Options{Scheme: scheme})
+				if err != nil {
+					return fmt.Errorf("create Config Connector reader: %w", err)
+				}
+				rec.GARAccess, err = garaccess.NewGate(ctx, kcc, garConfig)
+				if err != nil {
+					return fmt.Errorf("create GAR access gate: %w", err)
+				}
+			}
 
 			if err := ctrl.NewControllerManagedBy(mgr).
 				For(&privatev1.NodePool{}).
@@ -47,6 +70,8 @@ func NewCommand(rf *setup.RootFlags) *cobra.Command {
 			return mgr.Start(ctx)
 		},
 	}
+	cmd.Flags().StringVar(&garConfig.Repository, "gar-repository", "", "GAR repository resource; set with --iam-namespace to enable the provisioning gate")
+	cmd.Flags().StringVar(&garConfig.IAMNamespace, "iam-namespace", "", "Regional namespace containing the GAR Reader IAMPolicyMember")
 
 	return cmd
 }

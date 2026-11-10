@@ -30,4 +30,30 @@ subjects:
   - kind: ServiceAccount
     name: {{ include "gecko-nodepool.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
+{{- if .Values.garAccess.enabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "gecko-nodepool.fullname" . }}-gar-reader
+  namespace: {{ default .Release.Namespace .Values.garAccess.iamNamespace }}
+rules:
+  - apiGroups: ["iam.cnrm.cloud.google.com"]
+    resources: ["iampolicymembers"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "gecko-nodepool.fullname" . }}-gar-reader
+  namespace: {{ default .Release.Namespace .Values.garAccess.iamNamespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "gecko-nodepool.fullname" . }}-gar-reader
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "gecko-nodepool.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
 {{- end }}

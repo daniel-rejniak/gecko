@@ -36,7 +36,7 @@ linters:
       # transitions requires a separate review of controller behavior.
       - linters:
           - gocyclo
-        text: 'cyclomatic complexity 43 of func `\(\*Reconciler\)\.Reconcile` is high'
+        text: 'cyclomatic complexity 44 of func `\(\*Reconciler\)\.Reconcile` is high'
         path: '^nodepool/nodepool_controller\.go$'
       # Keep explicit cluster IDs in these test fixtures and request helpers
       # so each test describes the relationship between cluster and node pool.
